@@ -39,7 +39,7 @@ function createSimpleStore<
   const getReducerActions = (reducerDispatch) => {
     const reducerActions: any = {}
     Object.keys(actionsMap).forEach(fnName => {
-      reducerActions[fnName] = (payload) => reducerDispatch({ type: fnName, ...payload })
+      reducerActions[fnName] = (...payload) => reducerDispatch({ type: fnName, ...payload })
     })
     return reducerActions
   }
@@ -87,7 +87,11 @@ function createSimpleStore<
   const useActions = () => useContext<A>(ActionsContext)
   const useAsyncActions = () => useContext(AsyncActionsContext)
   return {
-    useState, useActions, useAsyncActions, Provider, GetState
+    useState,
+    useActions,
+    useAsyncActions,
+    Provider,
+    GetState,
   }
 }
 
