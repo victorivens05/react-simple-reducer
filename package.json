@@ -1,7 +1,7 @@
 {
-  "name": "use-simple-reducer",
-  "version": "0.1.0",
-  "private": true,
+  "name": "react-simple-reducer",
+  "version": "0.1.1",
+  "private": false,
   "dependencies": {
     "@testing-library/jest-dom": "^5.9.0",
     "@testing-library/react": "^10.2.1",
