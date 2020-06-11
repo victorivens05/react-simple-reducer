@@ -6,7 +6,7 @@ The same way as redux toolkit, uses immer to reduce the state.
 
 ### How to use
 
-Create a store using `createSimpleStore` passing the state, reducers and optionally async actions.\
+Create a store using `createSimpleStore` passing the state, reducers and optionally async actions.
 
 ```typescript
 const TodosStore = createSimpleStore({
@@ -83,7 +83,7 @@ You can use `createSelector` from [reselect](https://github.com/reduxjs/reselect
 
 ```typescript
 // you can also get the state type, so your selector will be type safe
-type IState = ReturnType<typeof ConteudoStore.useState>
+type IState = ReturnType<typeof TodosStore.useState>
 selectUnsavedTodos: createSelector(
     (s: IState) => s.todos,
     (todos) => {
