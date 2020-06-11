@@ -1,4 +1,4 @@
-import React, { useReducer, createContext, useContext, useCallback, useMemo, useRef, useEffect } from 'react'
+import React, { useReducer, createContext, useContext, useMemo, useRef, useEffect } from 'react'
 import produce from 'immer'
 
 type ActionMap<S> = {
@@ -7,50 +7,47 @@ type ActionMap<S> = {
 
 type GetFnWithParamType<O, S> =
   ((S, payload: any) => any) extends O
-  ? O extends (...args: [S, infer P]) => any ? (payload: P) => void : never : () => void
+  ? O extends (...args: [S, infer P]) => any ? (payload: P) => any : never : () => any
+
+type GetTypeSecondParam<O, S> =
+  ((S, payload: any) => any) extends O
+  ? O extends (...args: [S, infer P]) => any ? P : never : never
+
+type GetActionTypes<AM, S> = { [K in keyof AM]: ((S, payload: any) => any) extends AM[K]
+  ? { type: K, payload: GetTypeSecondParam<AM[K], S> }
+  : { type: K }
+}
 
 function createSimpleStore<
-  S extends Object,
-  AM extends ActionMap<S>,
-  A extends {
-    [K in keyof AM]: GetFnWithParamType<AM[K], S>
+  TState extends Object,
+  TActionMap extends ActionMap<TState>,
+  TActionTypes extends GetActionTypes<TActionMap, TState>,
+  TDispatch extends (action: TActionTypes[keyof TActionTypes]) => void,
+  TAsyncDispatch extends (p: (dispatch: TDispatch, getState: () => TState) => Promise<any> | any) => void,
+  TActions extends {
+    [K in keyof TActionMap]: GetFnWithParamType<TActionMap[K], TState>
   },
-  AAM extends {
-    [asyncAction: string]: (...payload) => (actions: A, getState: () => S) => void
+  TAscynActionMap extends {
+    [asyncAction: string]: (...payload) => (dispatch: TDispatch, getState: () => TState) => void
   },
-  > (initialState: S, actionsMap: AM, asyncActionsMap?: AAM): {
-    useState: () => S,
-    useActions: () => A,
-    useAsyncActions: () => AAM,
+  > (initialState: TState, actionsMap: TActionMap, asyncActionsMap?: TAscynActionMap): {
+    useState: () => TState,
+    useDispatch: () => TDispatch & TAsyncDispatch,
     Provider,
     GetState: ({ children }: {
-      children: (state: S) => JSX.Element
-    }) => JSX.Element
+      children: (state: TState) => JSX.Element
+    }) => JSX.Element,
+    thunks: TAscynActionMap,
+    actions: TActions,
   } {
+
   const StateContext = createContext(null as any)
-  const ActionsContext = createContext(null as any)
-  const AsyncActionsContext = createContext(null as any)
+  const DispatchContext = createContext(null as any)
+
   const reducer = (state, action) => {
-    const { type, ...payloads } = action
-    const nextState = produce(state, draftState => actionsMap[type](draftState, payloads ? payloads[0] : null))
+    const { type, payload } = action
+    const nextState = produce(state, draftState => actionsMap[type](draftState, payload))
     return nextState
-  }
-
-  const getReducerActions = (reducerDispatch) => {
-    const reducerActions: any = {}
-    Object.keys(actionsMap).forEach(fnName => {
-      reducerActions[fnName] = (...payload) => reducerDispatch({ type: fnName, ...payload })
-    })
-    return reducerActions
-  }
-
-  const getReducerAsyncActions = (asyncActionsMap, reducerActions, getState) => {
-    const reducerAsyncActions = {}
-    if (!asyncActionsMap) return {}
-    Object.keys(asyncActionsMap).forEach(fnName => {
-      reducerAsyncActions[fnName] = (...payload) => asyncActionsMap[fnName](...payload)(reducerActions, getState)
-    })
-    return reducerAsyncActions
   }
 
   const Provider = ({ children }) => {
@@ -61,38 +58,45 @@ function createSimpleStore<
       reducerStateRef.current = reducerState
     }, [reducerState])
 
-    const reducerActions = useMemo(() => {
-      return getReducerActions(reducerDispatch)
-    }, [actionsMap, reducerDispatch])
-
-    const reducerAsyncActions = useMemo(() => {
-      return getReducerAsyncActions(asyncActionsMap, reducerActions, () => reducerStateRef.current)
-    }, [asyncActionsMap, reducerActions])
+    const DispatchWrapper = (action) => {
+      if (typeof action === 'function') return action(reducerDispatch, () => reducerStateRef.current)
+      return (reducerDispatch as any)(action)
+    }
 
     return (
       <StateContext.Provider value={reducerState}>
-        <ActionsContext.Provider value={reducerActions}>
-          <AsyncActionsContext.Provider value={reducerAsyncActions}>
-            {children}
-          </AsyncActionsContext.Provider>
-        </ActionsContext.Provider>
+        <DispatchContext.Provider value={DispatchWrapper}>
+          {children}
+        </DispatchContext.Provider>
       </StateContext.Provider>
     )
   }
-  const GetState = ({ children }: { children: (state: S) => JSX.Element }) => {
+
+  const GetState = ({ children }: { children: (state: TState) => JSX.Element }) => {
     const s = useState()
     return children(s)
   }
+
   const useState = () => useContext<typeof initialState>(StateContext)
-  const useActions = () => useContext<A>(ActionsContext)
-  const useAsyncActions = () => useContext(AsyncActionsContext)
+  const useDispatch = () => useContext<TDispatch & TAsyncDispatch>(DispatchContext)
+  const actions = _createActionsFromActionMap(actionsMap)
+
   return {
     useState,
-    useActions,
-    useAsyncActions,
+    useDispatch,
     Provider,
     GetState,
+    thunks: asyncActionsMap as any,
+    actions: actions,
   }
+}
+
+function _createActionsFromActionMap (actionsMap) {
+  const actions: any = {}
+  Object.keys(actionsMap).map(k => {
+    actions[k] = (payload) => ({ type: k, payload })
+  })
+  return actions
 }
 
 export { createSimpleStore }
