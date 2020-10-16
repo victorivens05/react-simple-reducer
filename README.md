@@ -98,13 +98,13 @@ Remember to never return a new value as the first functions of the selector
 // WRONG
 selectDuplicateTodo: createSelector(
     (s: IState) => ({todos: s.todos, todo: s.todo}),
-    ({todos, todo}) => null
+    ({todos, todo}) => getDuplicates(todos, todo)
 )
 // CORRECT
 selectDuplicateTodo: createSelector(
     (s: IState) => s.todos,
     (s: IState) => s.todo,
-    (todos, todo) => null
+    (todos, todo) => getDuplicates(todos, todo)
 )
 ```
 

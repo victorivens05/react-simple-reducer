@@ -1,6 +1,6 @@
 {
   "name": "react-simple-reducer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "dependencies": {
     "@testing-library/jest-dom": "^5.9.0",
@@ -21,7 +21,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "publish:npm": "rm -rf dist && mkdir dist &&  babel src/components -d dist --copy-files"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -37,5 +38,16 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-react"
+    ]
+  },
+  "main": "dist/SimpleReducer.js",
+  "module": "dist/SimpleReducer.js",
+  "devDependencies": {
+    "@babel/cli": "^7.10.1",
+    "@babel/preset-react": "^7.10.1"
   }
 }
