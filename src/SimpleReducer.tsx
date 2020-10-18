@@ -1,5 +1,9 @@
-import React, { useReducer, createContext, useContext, useRef, useEffect } from 'react'
+import React, { useReducer, createContext, useContext, useRef, useEffect, useCallback } from 'react'
 import produce from 'immer'
+
+declare global {
+  interface Window { __REDUX_DEVTOOLS_EXTENSION__: any }
+}
 
 type ActionMap<S> = {
   [action: string]: (state: S, payload?) => void | S
@@ -33,7 +37,7 @@ function createSimpleStore<
   > (initialState: TState, actionsMap: TActionMap, asyncActionsMap?: TAscynActionMap): {
     useState: () => TState,
     useDispatch: () => TDispatch & TAsyncDispatch,
-    Provider,
+    Provider: ({ children, init }: { children, init?: (dispatch: TDispatch & TAsyncDispatch) => any }) => JSX.Element,
     GetState: ({ children }: {
       children: (state: TState) => JSX.Element
     }) => JSX.Element,
@@ -46,22 +50,88 @@ function createSimpleStore<
 
   const reducer = (state, action) => {
     const { type, payload } = action
+    if (type === '__REDUX_DEVTOOLS_RELOAD__') return payload
     const nextState = produce(state, draftState => actionsMap[type](draftState, payload))
     return nextState
   }
 
-  const Provider = ({ children }) => {
+  const useReduxDevtools = (name, handleDispatchReduxDevtools?) => {
+    const reduxDevtoolsExtension = React.useRef(window?.__REDUX_DEVTOOLS_EXTENSION__ ?? null)
+    const connection = React.useRef<any>()
+
+    useEffect(() => {
+      if (!reduxDevtoolsExtension.current) return
+      const reduxDev = reduxDevtoolsExtension.current
+      connection.current = reduxDev.connect({
+        name,
+      })
+
+      connection.current?.init(initialState)
+      connection.current?.subscribe(handleDispatchReduxDevtools)
+      return () => {
+        if (!reduxDevtoolsExtension.current) return
+        reduxDev(connection.current)
+      }
+    }, [handleDispatchReduxDevtools, name])
+
+    const send = React.useCallback((action, props) => {
+      if (!reduxDevtoolsExtension.current) return
+      connection.current?.send(action, props)
+    }, [])
+
+    return React.useMemo(() => ({
+      send
+    }), [send])
+
+  }
+
+  const Provider = ({ children, init }: { children, init?}) => {
     const [reducerState, reducerDispatch] = useReducer(reducer as any, initialState)
-    const reducerStateRef = useRef(reducerState)
+    const reducerStateRef = useRef<any>(reducerState)
+    const handleDispatchReduxDevtools = useCallback(({ type, state, payload }) => {
+      if (type !== 'DISPATCH') return
+      switch (payload.type) {
+        case 'COMMIT':
+        case 'RESET':
+        case 'ROLLBACK':
+        case 'JUMP_TO_STATE':
+        case 'JUMP_TO_ACTION':
+          const _ = (reducerDispatch as any)({ type: '__REDUX_DEVTOOLS_RELOAD__', payload: JSON.parse(state) })
+      }
+    }, [])
+    const reduxDevtools = useReduxDevtools('Store', handleDispatchReduxDevtools)
 
     useEffect(() => {
       reducerStateRef.current = reducerState
     }, [reducerState])
 
-    const DispatchWrapper = (action) => {
-      if (typeof action === 'function') return action(reducerDispatch, () => reducerStateRef.current)
+    const DispatchWrapper = React.useCallback((actionOrAsyncAction) => {
+
+      const _getNextStateAndSendToDevtools = (action) => {
+        const nextState = reducer({ ...reducerStateRef.current }, action)
+        reduxDevtools.send(action, nextState)
+      }
+
+      if (typeof actionOrAsyncAction === 'function') {
+        const asyncAction = actionOrAsyncAction
+        console.log({ asyncAction })
+        reduxDevtools.send(asyncAction, reducerStateRef.current)
+        return asyncAction((action) => {
+          _getNextStateAndSendToDevtools(action)
+          return (reducerDispatch as any)(action)
+        }, () => reducerStateRef.current)
+      }
+
+      const action = actionOrAsyncAction
+
+      _getNextStateAndSendToDevtools(action)
       return (reducerDispatch as any)(action)
-    }
+
+    }, [reduxDevtools])
+
+    useEffect(() => {
+      if (init) init(DispatchWrapper)
+    }, [DispatchWrapper, init])
 
     return (
       <StateContext.Provider value={reducerState}>
