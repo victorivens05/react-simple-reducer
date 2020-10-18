@@ -9,6 +9,7 @@ const initialState = {
     email: null,
   },
   random: 0,
+  lines: [] as { lineId: number, lineText: string }[],
 }
 const AuthStore = createSimpleStore(initialState, {
   randomize (state) {
@@ -40,6 +41,12 @@ const AuthStore = createSimpleStore(initialState, {
   },
   toggleLoading (state) {
     state.loading = !state.loading
+  },
+  init (state) {
+    state.random = 69420
+  },
+  addLine (state) {
+    state.lines.push({ lineId: state.lines.length + 1, lineText: 'Victor' })
   }
 }, {
   login (usuario: string, senha: number) {
@@ -53,6 +60,16 @@ const AuthStore = createSimpleStore(initialState, {
         dispatch({ type: 'logginSuccess', payload: { userEmail, userName } })
         console.log('getState 3', getState())
       }, 2000)
+    }
+  },
+  init () {
+    return async (dispatch) => {
+      setTimeout(() => {
+        dispatch(AuthStore.actions.randomize())
+      }, 2000)
+      setTimeout(() => {
+        dispatch(AuthStore.actions.randomize())
+      }, 3000)
     }
   }
 })
@@ -86,15 +103,19 @@ const s3 = createSelector(
 )
 
 const SimpleReducerTest = () => {
+  function init (dispatch: ReturnType<typeof AuthStore.useDispatch>) {
+    dispatch(AuthStore.actions.init())
+  }
   return (
     <>
-      <AuthStore.Provider>
+      <AuthStore.Provider init={init}>
         <AuthStore.GetState>
           {state => (
             <div>{state.user.email}</div>
           )}
         </AuthStore.GetState>
         <Child />
+        <Lines />
       </AuthStore.Provider>
     </>
   )
@@ -130,7 +151,21 @@ const Child = () => {
       <button onClick={() => dispatch(AuthStore.actions.clear())} >CLEAR</button>
       <button onClick={() => dispatch(AuthStore.actions.randomize())}>randomize</button>
       <button onClick={() => dispatch(AuthStore.actions.toggleLoading())}>toggle loading</button>
+      <button onClick={() => dispatch(AuthStore.actions.addLine())}>add line</button>
     </>
+  )
+}
+
+const Lines = () => {
+  const { lines } = AuthStore.useState()
+  return (
+    <div>
+      {
+        lines.map(l => (
+          <div style={{ borderBottom: '1px solid #ccc' }} key={l.lineId}>{l.lineId} - {l.lineText}</div>
+        ))
+      }
+    </div >
   )
 }
 
