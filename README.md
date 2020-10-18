@@ -1,3 +1,4 @@
+
 # React Simple Reducer
 
 Local state manager that enhances react's `useReducer`. Heavily inspired by [Redux Toolkit](https://redux-toolkit.js.org/).\
@@ -35,7 +36,7 @@ const TodosStore = createSimpleStore({
 ```
 
 Use the `Provider` to make the store available for every children component.\
-In the first component, outside of the Provider, you don't have access the the store and dispatch. That helps you mantain your entry component clean and declarative. If you need to access the store for some reason (show or hide components, for instance), use the high order component `GetState`.\
+In the first component, outside of the Provider, you don't have access the the store and dispatch. That helps you mantain your entry component clean and declarative. If you need to access the store for some reason (show or hide components, for instance), use the high order component `GetState`.
 
 ```typescript
 const TodoComponent = () => {
@@ -44,18 +45,15 @@ const TodoComponent = () => {
       <NewTodo />
       <TodoList />
       <SaveTodos />
-      <TodosStore.GetState>
-        {state => (<>Total of Todos: {state.todos.length}</>)}
-      </TodosStore.GetState>
     </TodosStore.Provider>
   )
 }
 ```
 
 Any child component will have access to the store.\
-`useState` and `useDispatch` are custom hooks that internally use `useContext` to provider with the current state and dispatch function respectively.\
+`useState` and `useDispatch` are custom hooks that internally use `useContext` to provide with the current state and dispatch function respectively.\
 You can dispatch an action reducer or a thunk (declared optionally as `createSimpleStore`'s third param)\
-There is a helper called `actions`, which holds all the reducer function and return the action object and a helper called `thunks`, which hold the thunks themselves. `dispatch` will call the thunk enhancing it with dispatch itself and getState (which will get the current state, even if it changes during an async call).\
+There is a helper called `actions`, which holds all the reducer function and return the action object and a helper called `thunks`, which hold the thunks themselves. `dispatch` will call the thunk enhancing it with dispatch itself and getState (which will get the current state, even if it changes during an async call).
 
 ```typescript
 const ChildComponent = () => {
@@ -74,6 +72,30 @@ const ChildComponent = () => {
 }
 
 ```
+### Aditional functionalities
+In the entry component, in which the `Provider` is declared, you don't have access to state or dispatch. If you need access to the state for some reason (show or hide components, for instance), use the high order component `GetState`.
+Usually, there is a startup for the store (load initial data through api, set initial parameters as received by props, for instance). `Provider` has the init prop, which expects a function with `dispatch` as first and only param. Through this function, you can initialize the store. A caveat is that this function is observed, and if it changes, it's called again, so if it's called multiple times, it needs to be wrapped on a `React.useCallback`. That behavior is useful for changes in props, to reflect on the store.
+
+
+```typescript
+const TodoComponent = ({todoGroupId}) => {
+  function initFn(dispatch: ReturnType<typeof AuthStore.useDispatch>) {
+	  dispatch(AuthStore.thunks.getTodos(todoGroupId))
+  }
+  return (
+    <TodosStore.Provider init={initFn}>
+      <NewTodo />
+      <TodoList />
+      <SaveTodos />
+      <TodosStore.GetState>
+        {state => (<>Total of Todos: {state.todos.length}</>)}
+      </TodosStore.GetState>
+    </TodosStore.Provider>
+  )
+}
+```
+### Redux Devtools
+A connection to redux devtools is automatically made, you can debug and time travel out of the box. Not all functionalities are implemented at this time. Open an issue or PR if you need something else.
 
 ---
 
@@ -92,7 +114,7 @@ selectUnsavedTodos: createSelector(
 )
 ```
 
-Remember to never return a new value as the first functions of the selector
+Remember to return an existing value from the input selectors functions (the first functions of the selector)
 
 ```typescript
 // WRONG
