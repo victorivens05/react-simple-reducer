@@ -1,28 +1,13 @@
 {
   "name": "react-simple-reducer",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": false,
   "dependencies": {
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.8",
-    "@types/jest": "^26.0.14",
-    "@types/node": "^14.11.10",
-    "@types/react": "^16.9.53",
-    "@types/react-dom": "^16.9.8",
-    "immer": "^7.0.9",
-    "react": "^16.14.0",
-    "react-dom": "^16.14.0",
-    "react-scripts": "3.4.3",
-    "reselect": "^4.0.0",
-    "typescript": "^4.0.3"
+    "immer": "^8.0.0",
+    "react": "^17.0.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "publish:npm": "rm -rf dist && mkdir dist &&  babel src/components -d dist --copy-files"
+    "build": "tsc"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -44,10 +29,6 @@
       "@babel/preset-react"
     ]
   },
-  "main": "dist/SimpleReducer.js",
-  "module": "dist/SimpleReducer.js",
-  "devDependencies": {
-    "@babel/cli": "^7.12.1",
-    "@babel/preset-react": "^7.12.1"
-  }
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts"
 }

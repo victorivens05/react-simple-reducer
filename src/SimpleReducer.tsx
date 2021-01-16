@@ -34,19 +34,37 @@ function createSimpleStore<
   TAscynActionMap extends {
     [asyncAction: string]: (...payload) => (dispatch: TDispatch, getState: () => TState) => void
   },
-  > (initialState: TState, actionsMap: TActionMap, asyncActionsMap?: TAscynActionMap): {
-    useState: () => TState,
-    useDispatch: () => TDispatch & TAsyncDispatch,
-    Provider: ({ children, init }: { children, init?: (dispatch: TDispatch & TAsyncDispatch) => any }) => JSX.Element,
-    GetState: ({ children }: {
-      children: (state: TState) => JSX.Element
-    }) => JSX.Element,
-    thunks: TAscynActionMap,
-    actions: TActions,
-  } {
+  TOptions extends {
+    cache?: {
+      location?: 'LOCALSTORAGE' | 'SESSIONSTORAGE',
+      key: string,
+    }
+  }
+> (
+  initialState: TState,
+  actionsMap: TActionMap,
+  additionalProps?: {
+    thunks?: TAscynActionMap,
+    options?: TOptions,
+  }
+): {
+  useState: () => TState,
+  useDispatch: () => TDispatch & TAsyncDispatch,
+  Provider: ({ children, init }: { children, init?: (dispatch: TDispatch & TAsyncDispatch) => any }) => JSX.Element,
+  GetState: ({ children }: {
+    children: (state: TState) => JSX.Element
+  }) => JSX.Element,
+  thunks: TAscynActionMap,
+  actions: TActions,
+  useSelector: any,
+} {
 
   const StateContext = createContext(null as any)
   const DispatchContext = createContext(null as any)
+
+  const asyncActionsMap = additionalProps?.thunks || []
+  const options = additionalProps?.options || { cache: { location: '', key: '' } }
+  if (options.cache && !options.cache.location) options.cache.location = 'LOCALSTORAGE'
 
   const reducer = (state, action) => {
     const { type, payload } = action
@@ -80,13 +98,14 @@ function createSimpleStore<
     }, [])
 
     return React.useMemo(() => ({
-      send
+      send,
     }), [send])
 
   }
 
   const Provider = ({ children, init }: { children, init?}) => {
-    const [reducerState, reducerDispatch] = useReducer(reducer as any, initialState)
+    const initialOrCachedState = _getInitialState({ initialState, cache: options.cache })
+    const [reducerState, reducerDispatch] = useReducer(reducer as any, initialOrCachedState)
     const reducerStateRef = useRef<any>(reducerState)
     const handleDispatchReduxDevtools = useCallback(({ type, state, payload }) => {
       if (type !== 'DISPATCH') return
@@ -103,6 +122,10 @@ function createSimpleStore<
 
     useEffect(() => {
       reducerStateRef.current = reducerState
+      if (options.cache?.key) {
+        const { location, key } = options.cache
+        _saveCache({ location, key, state: reducerState })
+      }
     }, [reducerState])
 
     const DispatchWrapper = React.useCallback((actionOrAsyncAction) => {
@@ -114,7 +137,6 @@ function createSimpleStore<
 
       if (typeof actionOrAsyncAction === 'function') {
         const asyncAction = actionOrAsyncAction
-        console.log({ asyncAction })
         reduxDevtools.send(asyncAction, reducerStateRef.current)
         return asyncAction((action) => {
           _getNextStateAndSendToDevtools(action)
@@ -150,10 +172,15 @@ function createSimpleStore<
   const useState = () => useContext<typeof initialState>(StateContext)
   const useDispatch = () => useContext<TDispatch & TAsyncDispatch>(DispatchContext)
   const actions = _createActionsFromActionMap(actionsMap)
+  const useSelector = (selector) => {
+    const state = useState()
+    return selector(state)
+  }
 
   return {
     useState,
     useDispatch,
+    useSelector,
     Provider,
     GetState,
     thunks: asyncActionsMap as any,
@@ -163,10 +190,31 @@ function createSimpleStore<
 
 function _createActionsFromActionMap (actionsMap) {
   const actions: any = {}
-  Object.keys(actionsMap).map(k => {
+  Object.keys(actionsMap).forEach(k => {
     actions[k] = (payload) => ({ type: k, payload })
   })
   return actions
 }
+
+function _saveCache ({ location, key, state }) {
+  if (location === 'LOCALSTORAGE') {
+    localStorage.setItem(key, JSON.stringify(state))
+  } else if (location === 'SESSIONSTORAGE') {
+    sessionStorage.setItem(key, JSON.stringify(state))
+  }
+}
+
+function _getInitialState ({ initialState, cache }) {
+  if (cache?.key && cache?.location === 'LOCALSTORAGE') {
+    const state = localStorage.getItem(cache.key)
+    if (state && state !== 'undefined') return JSON.parse(state)
+  }
+  if (cache?.key && cache?.location === 'SESSIONSTORAGE') {
+    const state = sessionStorage.getItem(cache.key)
+    if (state && state !== 'undefined') return JSON.parse(state)
+  }
+  return initialState
+}
+
 
 export { createSimpleStore }
