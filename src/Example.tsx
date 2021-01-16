@@ -49,27 +49,29 @@ const AuthStore = createSimpleStore(initialState, {
     state.lines.push({ lineId: state.lines.length + 1, lineText: 'Victor' })
   }
 }, {
-  login (usuario: string, senha: number) {
-    return async (dispatch, getState) => {
-      const userName = usuario
-      const userEmail = senha
-      dispatch({ type: 'loginStarted' })
-      console.log('getState 1', getState())
-      setTimeout(() => {
-        console.log('getState 2', getState())
-        dispatch({ type: 'logginSuccess', payload: { userEmail, userName } })
-        console.log('getState 3', getState())
-      }, 2000)
-    }
-  },
-  init () {
-    return async (dispatch) => {
-      setTimeout(() => {
-        dispatch(AuthStore.actions.randomize())
-      }, 2000)
-      setTimeout(() => {
-        dispatch(AuthStore.actions.randomize())
-      }, 3000)
+  thunks: {
+    login (usuario: string, senha: number) {
+      return async (dispatch, getState) => {
+        const userName = usuario
+        const userEmail = senha
+        dispatch({ type: 'loginStarted' })
+        console.log('getState 1', getState())
+        setTimeout(() => {
+          console.log('getState 2', getState())
+          dispatch({ type: 'logginSuccess', payload: { userEmail, userName } })
+          console.log('getState 3', getState())
+        }, 2000)
+      }
+    },
+    init () {
+      return async (dispatch) => {
+        setTimeout(() => {
+          dispatch(AuthStore.actions.randomize())
+        }, 2000)
+        setTimeout(() => {
+          dispatch(AuthStore.actions.randomize())
+        }, 3000)
+      }
     }
   }
 })
