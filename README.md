@@ -13,10 +13,10 @@ Create a store using `createSimpleStore` passing the state and reducers. Optiona
 
 ```typescript
 const TodosStore = createSimpleStore({
-  todo: '',
+  todo: null as TodoType | null,
   todos: [] as TodoType[],
 }, {
-  updateTodo (state, todo) {
+  updateTodo (state, todo: TodoType) {
     state.todo = todo
   },
   addTodo (state) {
@@ -63,7 +63,7 @@ const TodoComponent = () => {
 Any child component will have access to the store.\
 `useState` and `useDispatch` are custom hooks that internally use `useContext` to provide with the current state and dispatch function respectively.\
 You can dispatch an action reducer or a thunk (declared optionally in the options object, passed as  `createSimpleStore`'s third param)\
-There is a helper called `actions`, which holds all the reducer function and return the action object and a helper called `thunks`, which hold the thunks themselves. `dispatch` will call the thunk enhancing it with dispatch itself and getState (which will get the current state, even if it changes during an async call).
+There is a helper called `actions`, which holds all the reducer function and return the action object and a helper called `thunks`, which hold the thunks themselves. `dispatch` will call the thunk enhancing it with dispatch itself and getState (which will get the current state, even if it changes during an async call). Both actions and thunks will correctly type their params.
 
 ```typescript
 const ChildComponent = () => {
@@ -74,8 +74,8 @@ const ChildComponent = () => {
   const dispatch = TodosStore.useDispatch()
 
   // dispatch actions using two methods: object and actions
-  dispatch({ type: 'updateTodo', payload: 'NEW TODO TEXT' })
-  dispatch(TodosStore.actions.updateTodo('NEW TODO TEXT'))
+  dispatch({ type: 'updateTodo', payload: { text: 'NEW TODO TEXT' } })
+  dispatch(TodosStore.actions.updateTodo({ text: 'NEW TODO TEXT' }))
 
   // dispatch async actions using thunks
   dispatch(TodosStore.thunks.saveTodos({ saveAll: false }))
