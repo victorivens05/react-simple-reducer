@@ -56,7 +56,7 @@ function createSimpleStore<
   }) => JSX.Element,
   thunks: TAscynActionMap,
   actions: TActions,
-  useSelector: any,
+  useSelector: <TSelector extends (...args) => any>(selector: TSelector) => ReturnType<TSelector>
 } {
 
   const StateContext = createContext(null as any)

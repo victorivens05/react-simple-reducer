@@ -132,6 +132,8 @@ const Child = () => {
   const [codigo, setCodigo] = useState('')
   const stateWithId = useMemo(() => ({ ...state, id }), [id, state])
   const _s3 = s3(stateWithId)
+  const selected: ReturnType<typeof s2> = AuthStore.useSelector(s2)
+  const selected2 = AuthStore.useSelector(s2)
 
   return (
     <>

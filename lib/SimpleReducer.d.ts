@@ -41,6 +41,6 @@ declare function createSimpleStore<TState extends Object, TActionMap extends Act
     }) => JSX.Element;
     thunks: TAscynActionMap;
     actions: TActions;
-    useSelector: any;
+    useSelector: <TSelector extends (...args: any[]) => any>(selector: TSelector) => ReturnType<TSelector>;
 };
 export { createSimpleStore };
