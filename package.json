@@ -3,7 +3,7 @@
   "version": "1.0.3",
   "private": false,
   "dependencies": {
-    "immer": "^8.0.0",
+    "immer": "^9.0.6",
     "react": "^17.0.1"
   },
   "scripts": {
