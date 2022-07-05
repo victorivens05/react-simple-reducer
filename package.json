@@ -1,13 +1,15 @@
 {
   "name": "react-simple-reducer",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": false,
   "dependencies": {
-    "immer": "^9.0.6",
-    "react": "^17.0.1"
+    "immer": "^9.0.6"
   },
   "scripts": {
     "build": "tsc"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.6"
   },
   "eslintConfig": {
     "extends": "react-app"
