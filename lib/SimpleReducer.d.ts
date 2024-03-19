@@ -1,15 +1,15 @@
-/// <reference types="react" />
+import React from 'react';
 declare global {
     interface Window {
         __REDUX_DEVTOOLS_EXTENSION__: any;
     }
 }
-declare type ActionMap<S> = {
+type ActionMap<S> = {
     [action: string]: (state: S, payload?: any) => void | S;
 };
-declare type GetFnWithParamType<O, S> = ((S: any, payload: any) => any) extends O ? O extends (...args: [S, infer P]) => any ? (payload: P) => any : never : () => any;
-declare type GetTypeSecondParam<O, S> = ((S: any, payload: any) => any) extends O ? O extends (...args: [S, infer P]) => any ? P : never : never;
-declare type GetActionTypes<AM, S> = {
+type GetFnWithParamType<O, S> = ((S: any, payload: any) => any) extends O ? O extends (...args: [S, infer P]) => any ? (payload: P) => any : never : () => any;
+type GetTypeSecondParam<O, S> = ((S: any, payload: any) => any) extends O ? O extends (...args: [S, infer P]) => any ? P : never : never;
+type GetActionTypes<AM, S> = {
     [K in keyof AM]: ((S: any, payload: any) => any) extends AM[K] ? {
         type: K;
         payload: GetTypeSecondParam<AM[K], S>;
@@ -32,8 +32,8 @@ declare function createSimpleStore<TState extends Object, TActionMap extends Act
 }): {
     useState: () => TState;
     useDispatch: () => TDispatch & TAsyncDispatch;
-    Provider: ({ children, init }: {
-        children: any;
+    Provider: ({ children, init, }: {
+        children: React.ReactNode;
         init?: (dispatch: TDispatch & TAsyncDispatch) => any;
     }) => JSX.Element;
     GetState: ({ children }: {
@@ -42,5 +42,8 @@ declare function createSimpleStore<TState extends Object, TActionMap extends Act
     thunks: TAscynActionMap;
     actions: TActions;
     useSelector: <TSelector extends (...args: any[]) => any>(selector: TSelector) => ReturnType<TSelector>;
+    createInitializer: (element: () => JSX.Element) => (props: {
+        initialValues: Partial<TState>;
+    }) => any;
 };
 export { createSimpleStore };

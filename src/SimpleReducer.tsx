@@ -1,25 +1,40 @@
-import React, { useReducer, createContext, useContext, useRef, useEffect, useCallback } from 'react'
+import React, {
+  useReducer,
+  createContext,
+  useContext,
+  useRef,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react'
 import produce from 'immer'
 
 declare global {
-  interface Window { __REDUX_DEVTOOLS_EXTENSION__: any }
+  interface Window {
+    __REDUX_DEVTOOLS_EXTENSION__: any
+  }
 }
 
 type ActionMap<S> = {
   [action: string]: (state: S, payload?) => void | S
 }
 
-type GetFnWithParamType<O, S> =
-  ((S, payload: any) => any) extends O
-  ? O extends (...args: [S, infer P]) => any ? (payload: P) => any : never : () => any
+type GetFnWithParamType<O, S> = ((S, payload: any) => any) extends O
+  ? O extends (...args: [S, infer P]) => any
+    ? (payload: P) => any
+    : never
+  : () => any
 
-type GetTypeSecondParam<O, S> =
-  ((S, payload: any) => any) extends O
-  ? O extends (...args: [S, infer P]) => any ? P : never : never
+type GetTypeSecondParam<O, S> = ((S, payload: any) => any) extends O
+  ? O extends (...args: [S, infer P]) => any
+    ? P
+    : never
+  : never
 
-type GetActionTypes<AM, S> = { [K in keyof AM]: ((S, payload: any) => any) extends AM[K]
-  ? { type: K, payload: GetTypeSecondParam<AM[K], S> }
-  : { type: K }
+type GetActionTypes<AM, S> = {
+  [K in keyof AM]: ((S, payload: any) => any) extends AM[K]
+    ? { type: K; payload: GetTypeSecondParam<AM[K], S> }
+    : { type: K }
 }
 
 function createSimpleStore<
@@ -27,7 +42,9 @@ function createSimpleStore<
   TActionMap extends ActionMap<TState>,
   TActionTypes extends GetActionTypes<TActionMap, TState>,
   TDispatch extends (action: TActionTypes[keyof TActionTypes]) => void,
-  TAsyncDispatch extends (p: (dispatch: TDispatch, getState: () => TState) => Promise<any> | any) => void,
+  TAsyncDispatch extends (
+    p: (dispatch: TDispatch, getState: () => TState) => Promise<any> | any
+  ) => void,
   TActions extends {
     [K in keyof TActionMap]: GetFnWithParamType<TActionMap[K], TState>
   },
@@ -36,29 +53,35 @@ function createSimpleStore<
   },
   TOptions extends {
     cache?: {
-      location?: 'LOCALSTORAGE' | 'SESSIONSTORAGE',
-      key: string,
+      location?: 'LOCALSTORAGE' | 'SESSIONSTORAGE'
+      key: string
     }
   }
-> (
+>(
   initialState: TState,
   actionsMap: TActionMap,
   additionalProps?: {
-    thunks?: TAscynActionMap,
-    options?: TOptions,
+    thunks?: TAscynActionMap
+    options?: TOptions
   }
 ): {
-  useState: () => TState,
-  useDispatch: () => TDispatch & TAsyncDispatch,
-  Provider: ({ children, init }: { children, init?: (dispatch: TDispatch & TAsyncDispatch) => any }) => JSX.Element,
-  GetState: ({ children }: {
-    children: (state: TState) => JSX.Element
-  }) => JSX.Element,
-  thunks: TAscynActionMap,
-  actions: TActions,
+  useState: () => TState
+  useDispatch: () => TDispatch & TAsyncDispatch
+  Provider: ({
+    children,
+    init,
+  }: {
+    children: React.ReactNode
+    init?: (dispatch: TDispatch & TAsyncDispatch) => any
+  }) => JSX.Element
+  GetState: ({ children }: { children: (state: TState) => JSX.Element }) => JSX.Element
+  thunks: TAscynActionMap
+  actions: TActions
   useSelector: <TSelector extends (...args) => any>(selector: TSelector) => ReturnType<TSelector>
+  createInitializer: (
+    element: () => JSX.Element
+  ) => (props: { initialValues: Partial<TState> }) => any
 } {
-
   const StateContext = createContext(null as any)
   const DispatchContext = createContext(null as any)
 
@@ -69,12 +92,16 @@ function createSimpleStore<
   const reducer = (state, action) => {
     const { type, payload } = action
     if (type === '__REDUX_DEVTOOLS_RELOAD__') return payload
-    const nextState = produce(state, draftState => actionsMap[type](draftState, payload))
+    if (type === '__INITIALIZE_STATE__') return payload
+    const nextState = produce(state, (draftState) => actionsMap[type](draftState, payload))
     return nextState
   }
 
   const useReduxDevtools = (name, handleDispatchReduxDevtools?) => {
-    const reduxDevtoolsExtension = React.useRef(window?.__REDUX_DEVTOOLS_EXTENSION__ ?? null)
+    const isBrowser = typeof window !== 'undefined'
+    const reduxDevtoolsExtension = React.useRef(
+      isBrowser ? window?.__REDUX_DEVTOOLS_EXTENSION__ ?? null : null
+    )
     const connection = React.useRef<any>()
 
     useEffect(() => {
@@ -97,13 +124,15 @@ function createSimpleStore<
       connection.current?.send(action, props)
     }, [])
 
-    return React.useMemo(() => ({
-      send,
-    }), [send])
-
+    return React.useMemo(
+      () => ({
+        send,
+      }),
+      [send]
+    )
   }
 
-  const Provider = ({ children, init }: { children, init?}) => {
+  const Provider = ({ children, init }: { children; init? }) => {
     const initialOrCachedState = _getInitialState({ initialState, cache: options.cache })
     const [reducerState, reducerDispatch] = useReducer(reducer as any, initialOrCachedState)
     const reducerStateRef = useRef<any>(reducerState)
@@ -115,7 +144,10 @@ function createSimpleStore<
         case 'ROLLBACK':
         case 'JUMP_TO_STATE':
         case 'JUMP_TO_ACTION':
-          const _ = (reducerDispatch as any)({ type: '__REDUX_DEVTOOLS_RELOAD__', payload: JSON.parse(state) })
+          const _ = (reducerDispatch as any)({
+            type: '__REDUX_DEVTOOLS_RELOAD__',
+            payload: JSON.parse(state),
+          })
       }
     }, [])
     const reduxDevtools = useReduxDevtools('Store', handleDispatchReduxDevtools)
@@ -128,28 +160,32 @@ function createSimpleStore<
       }
     }, [reducerState])
 
-    const DispatchWrapper = React.useCallback((actionOrAsyncAction) => {
+    const DispatchWrapper = React.useCallback(
+      (actionOrAsyncAction) => {
+        const _getNextStateAndSendToDevtools = (action) => {
+          const nextState = reducer({ ...reducerStateRef.current }, action)
+          reduxDevtools.send(action, nextState)
+        }
 
-      const _getNextStateAndSendToDevtools = (action) => {
-        const nextState = reducer({ ...reducerStateRef.current }, action)
-        reduxDevtools.send(action, nextState)
-      }
+        if (typeof actionOrAsyncAction === 'function') {
+          const asyncAction = actionOrAsyncAction
+          reduxDevtools.send(asyncAction, reducerStateRef.current)
+          return asyncAction(
+            (action) => {
+              _getNextStateAndSendToDevtools(action)
+              return (reducerDispatch as any)(action)
+            },
+            () => reducerStateRef.current
+          )
+        }
 
-      if (typeof actionOrAsyncAction === 'function') {
-        const asyncAction = actionOrAsyncAction
-        reduxDevtools.send(asyncAction, reducerStateRef.current)
-        return asyncAction((action) => {
-          _getNextStateAndSendToDevtools(action)
-          return (reducerDispatch as any)(action)
-        }, () => reducerStateRef.current)
-      }
+        const action = actionOrAsyncAction
 
-      const action = actionOrAsyncAction
-
-      _getNextStateAndSendToDevtools(action)
-      return (reducerDispatch as any)(action)
-
-    }, [reduxDevtools])
+        _getNextStateAndSendToDevtools(action)
+        return (reducerDispatch as any)(action)
+      },
+      [reduxDevtools]
+    )
 
     useEffect(() => {
       if (init) init(DispatchWrapper)
@@ -157,9 +193,7 @@ function createSimpleStore<
 
     return (
       <StateContext.Provider value={reducerState}>
-        <DispatchContext.Provider value={DispatchWrapper}>
-          {children}
-        </DispatchContext.Provider>
+        <DispatchContext.Provider value={DispatchWrapper}>{children}</DispatchContext.Provider>
       </StateContext.Provider>
     )
   }
@@ -177,6 +211,13 @@ function createSimpleStore<
     return selector(state)
   }
 
+  function createInitializer(Component: () => JSX.Element) {
+    return function initializer(props: { initialValues: Partial<typeof initialState> }) {
+      initialState = { ...initialState, ...props.initialValues }
+      return <Provider children={<Component />} />
+    }
+  }
+
   return {
     useState,
     useDispatch,
@@ -185,18 +226,19 @@ function createSimpleStore<
     GetState,
     thunks: asyncActionsMap as any,
     actions: actions,
+    createInitializer,
   }
 }
 
-function _createActionsFromActionMap (actionsMap) {
+function _createActionsFromActionMap(actionsMap) {
   const actions: any = {}
-  Object.keys(actionsMap).forEach(k => {
+  Object.keys(actionsMap).forEach((k) => {
     actions[k] = (payload) => ({ type: k, payload })
   })
   return actions
 }
 
-function _saveCache ({ location, key, state }) {
+function _saveCache({ location, key, state }) {
   if (location === 'LOCALSTORAGE') {
     localStorage.setItem(key, JSON.stringify(state))
   } else if (location === 'SESSIONSTORAGE') {
@@ -204,7 +246,7 @@ function _saveCache ({ location, key, state }) {
   }
 }
 
-function _getInitialState ({ initialState, cache }) {
+function _getInitialState({ initialState, cache }) {
   if (cache?.key && cache?.location === 'LOCALSTORAGE') {
     const state = localStorage.getItem(cache.key)
     if (state && state !== 'undefined') return JSON.parse(state)
@@ -215,6 +257,5 @@ function _getInitialState ({ initialState, cache }) {
   }
   return initialState
 }
-
 
 export { createSimpleStore }
